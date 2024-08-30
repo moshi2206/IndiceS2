@@ -99,12 +99,16 @@ def cut_tile_final(poligono):
         srcband = gtif.GetRasterBand(1)
         srcband.SetNoDataValue(0)
         stats = srcband.ComputeStatistics(0)
+        minx = stats[0]
+        maxx = stats[1]
+        print(maxx, minx)
+        margen = (maxx - 128) / 5
         texto = F"""
-            0-50: 237 35 35
-            51-100: 251 143 40
-            101-150: 254 240 45
-            151-200: 166 235 32
-            201-255: 65 137 49
+            {minx}-{minx + margen}: 237 35 35
+            {minx + margen}-{minx + (margen * 2)}100: 251 143 40
+            {minx + (margen * 2)}-{minx + (margen * 3)}: 254 240 45
+            {minx + (margen * 3)}-{minx + (margen * 4)}: 166 235 32
+            {minx + (margen * 4)}-{maxx}: 65 137 49
         """
         print("Colores definidos")
         filetxt = open(F"{os.getcwd()}/s2files/NDVI.txt", "w")
@@ -344,5 +348,5 @@ poligono = [
   ]
 ]
 end = date.today()
-start = end - timedelta(days=20)
+start = end - timedelta(days=6)
 downloadsentinel(poligono, start, end)
