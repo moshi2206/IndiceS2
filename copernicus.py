@@ -1,10 +1,8 @@
-import logging, requests, json, os, zipfile
+import requests, json, os, zipfile
 from requests.adapters import HTTPAdapter
 from shapely.geometry import Polygon
 from urllib3.util import Retry
 from decouple import config
-
-LOG = logging.getLogger("gentiles")
 
 retries = Retry(
     total=3,
@@ -54,10 +52,11 @@ and ContentDate/Start lt {end}"""
     return json
 
 def download_all(da: dict) -> str:
-    if os.path.exists("file/" + da["Name"]):
+    if os.path.exists(F"{os.getcwd()}/s2files/" + da["Name"]):
         pass
     else:
-        token = get_access_token(config("USER", ""), config("PASSWORD", ""))
+        # Se obtiene un token por cada descarga, el token caduca cada x minutos
+        token = get_access_token(config("USER_DATASPACE", None), config("PASSWORD_DATASPACE", None))
         # Hacer request para descargar archivo
         url = f"https://zipper.dataspace.copernicus.eu/odata/v1/Products({da['Id']})/$value"
         headers = {"Authorization": f"Bearer {token}"}
@@ -69,21 +68,20 @@ def download_all(da: dict) -> str:
         total_size = int(response.headers['Content-Length'])
         downloaded_size = 0
         # Escribir archivo
-        with open("file/" + da['Name'] + ".zip", "wb") as file:
+        with open(F"{os.getcwd()}/s2files/" + da['Name'] + ".zip", "wb") as file:
             for chunk in response.iter_content(chunk_size=8192):
                 if chunk:
                     downloaded_size += len(chunk)
                     percentage = (downloaded_size / total_size) * 100
-                    if percentage % 10 == 0:
-                        LOG.info(F"{da['Name']}: {percentage:.2f}%\r")
+                    print(F"{da['Name']}: {percentage:.2f}%\r")
                     file.write(chunk)
         try:
             # Descomprimir archivo
-            with zipfile.ZipFile("s2files/" + da["Name"] + ".zip", "r") as zip_file:
-                zip_file.extractall("s2files/")
-            os.remove("s2files/" + da["Name"] + ".zip")
+            with zipfile.ZipFile(F"{os.getcwd()}/s2files/" + da["Name"] + ".zip", "r") as zip_file:
+                zip_file.extractall(F"{os.getcwd()}s2files/")
+            os.remove(F"{os.getcwd()}/s2files/" + da["Name"] + ".zip")
         except:
-            LOG.info(F"{da['Name']} No se descargo correctamente...")
-            LOG.info("Reintentando")
-            os.remove("s2files/" + da["Name"] + ".zip")
+            print(F"{da['Name']} No se descargo correctamente...")
+            print("Reintentando")
+            os.remove(F"{os.getcwd()}/s2files/" + da["Name"] + ".zip")
             download_all(da, token)
