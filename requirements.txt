@@ -1,0 +1,10 @@
+certifi==2024.7.4
+charset-normalizer==3.3.2
+idna==3.8
+numpy==1.24.4
+opencv-contrib-python==4.10.0.84
+opencv-python==4.10.0.84
+python-decouple==3.8
+requests==2.32.3
+shapely==2.0.6
+urllib3==2.2.2

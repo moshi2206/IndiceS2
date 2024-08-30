@@ -5,12 +5,18 @@ import cv2
 from shapely.geometry import Polygon
 
 def list_to_tuple(data):
+    """
+    Convertir lista a tuple
+    """
     if isinstance(data, list):
         return tuple(list_to_tuple(item) for item in data)
     else:
         return data
 
 def reduce_vertice(poly):
+    """
+    Reduce vertice es una funcion para reducir vertices de un poligono irregular al minimo posible
+    """
     poly2 = np.array(poly, dtype=np.float32)
     rect = cv2.minAreaRect(poly2)
     box = cv2.boxPoints(rect)
@@ -20,6 +26,9 @@ def reduce_vertice(poly):
     return [box]
 
 def downloadsentinel(poly, start, end):
+    """
+    Funcion para filtrar y descargar imagenes satelitales
+    """
     resp = []
     reduce = reduce_vertice([poly[0]])
     data = filter_by_date_box(
