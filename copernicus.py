@@ -78,7 +78,7 @@ def download_all(da: dict) -> str:
         try:
             # Descomprimir archivo
             with zipfile.ZipFile(F"{os.getcwd()}/s2files/" + da["Name"] + ".zip", "r") as zip_file:
-                zip_file.extractall(F"{os.getcwd()}s2files/")
+                zip_file.extractall(F"{os.getcwd()}/s2files/")
             os.remove(F"{os.getcwd()}/s2files/" + da["Name"] + ".zip")
         except:
             print(F"{da['Name']} No se descargo correctamente...")
