@@ -17,7 +17,10 @@ Proyecto de muestra para descargar y procesar imagenes satelitales de Sentinel-2
 * Crear un archivo .env en la raiz del proyecto y agregar el siguiente contenido con los datos de registro en https://dataspace.copernicus.eu/.
     USER_DATASPACE='correo registrado'.
     PASSWORD_DATASPACE='password registrado'.
-* [Ejecutar ](sentinel.py).
+* Ejecutar [sentinel.py](sentinel.py).
+
+# Resultado Logrado
+![Resultado](/ndvi/final6NDVI.png)
 
 # TODO
 * Crear imágenes NDVI.

@@ -7,6 +7,7 @@ import cv2, glob, os, rasterio
 from shapely.geometry import Polygon
 from osgeo import ogr, osr, gdal
 from osgeo import gdal_array as ga
+from osgeo_utils.pct2rgb import pct2rgb
 
 gdal.SetCacheMax(4000000000)
 
@@ -87,28 +88,15 @@ def cut_tile_final(poligono):
         gtif = gdal.Open(F"{os.getcwd()}/s2files/NDVI.tif")
         srcband = gtif.GetRasterBand(1)
         srcband.SetNoDataValue(0)
-        stats = srcband.ComputeStatistics(0)
-        """
-        gdal.Translate(
-            F"{os.getcwd()}/s2files/finalxNDVI.tif",
-            F"{os.getcwd()}/s2files/NDVI.tif",
-            options=gdal.TranslateOptions(
-                scaleParams=[[stats[0], stats[1]]]
-            )
-        )
-        gtif = gdal.Open(F"{os.getcwd()}/s2files/finalxNDVI.tif")
-        srcband = gtif.GetRasterBand(1)
-        srcband.SetNoDataValue(0)
-        stats = srcband.ComputeStatistics(0)
-        """
-        minx = stats[0]
-        maxx = stats[1]
-        print(maxx, minx)
-
-        texto = F"""
-            {minx} 121 9 9
-            {maxx} 1 121 9
-        """
+        # Se aplica quantiles para mejor distribucion de pixeles
+        ndvi_data = srcband.ReadAsArray()
+        ndvi_data_flat = ndvi_data.flatten()
+        ndvi_data_filtered = ndvi_data_flat[ndvi_data_flat != srcband.GetNoDataValue()]
+        colors = ['red', 'orange', 'yellow', 'green', '76 132 60']
+        quantiles = np.quantile(ndvi_data_filtered, np.linspace(0, 1, len(colors) + 1)[1:])
+        texto = ""
+        for i, (color, quantile) in enumerate(zip(colors, quantiles)):
+            texto += F"{quantile} {color}\n"
         print("Colores definidos")
         filetxt = open(F"{os.getcwd()}/s2files/NDVI.txt", "w")
         filetxt.write(texto)
@@ -118,8 +106,6 @@ def cut_tile_final(poligono):
             F"{os.getcwd()}/s2files/NDVI.tif",
             options=gdal.TranslateOptions(
                 format="VRT",
-                outputType=gdal.GDT_Byte,
-                maskBand=1
             )
         )
         gdal.DEMProcessing(
