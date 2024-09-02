@@ -88,6 +88,7 @@ def cut_tile_final(poligono):
         srcband = gtif.GetRasterBand(1)
         srcband.SetNoDataValue(0)
         stats = srcband.ComputeStatistics(0)
+        """
         gdal.Translate(
             F"{os.getcwd()}/s2files/finalxNDVI.tif",
             F"{os.getcwd()}/s2files/NDVI.tif",
@@ -99,16 +100,14 @@ def cut_tile_final(poligono):
         srcband = gtif.GetRasterBand(1)
         srcband.SetNoDataValue(0)
         stats = srcband.ComputeStatistics(0)
+        """
         minx = stats[0]
         maxx = stats[1]
         print(maxx, minx)
-        margen = (maxx - 128) / 5
+
         texto = F"""
-            {minx}-{minx + margen}: 237 35 35
-            {minx + margen}-{minx + (margen * 2)}100: 251 143 40
-            {minx + (margen * 2)}-{minx + (margen * 3)}: 254 240 45
-            {minx + (margen * 3)}-{minx + (margen * 4)}: 166 235 32
-            {minx + (margen * 4)}-{maxx}: 65 137 49
+            {minx} 121 9 9
+            {maxx} 1 121 9
         """
         print("Colores definidos")
         filetxt = open(F"{os.getcwd()}/s2files/NDVI.txt", "w")
