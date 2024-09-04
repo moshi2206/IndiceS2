@@ -5,7 +5,7 @@ Proyecto de muestra para descargar y procesar imagenes satelitales de Sentinel-2
 * [Funciones para pasar datos: ](sentinel.py) Funciones para pasar parametros de polígono [arreglos], desde [fecha] y hasta [fecha].
 
 # Requisitos
-* Python https://www.python.org/
+* Python https://www.python.org/.
 * GDAL https://gdal.org/en/latest/.
 * Registrarse en https://dataspace.copernicus.eu/ para acceder a las imagenes satelitales.
 
@@ -23,11 +23,10 @@ Proyecto de muestra para descargar y procesar imagenes satelitales de Sentinel-2
 ![Resultado](/ndvi/final6NDVI.png)
 
 # TODO
-* Crear imágenes NDVI.
-* Mejorar Colores.
-* Clasificación y Teledetección de nubes.
+- [x] Crear imágenes NDVI.
+- [x] Mejorar Colores.
+- [ ] Clasificación y Teledetección de nubes.
 
 # PD
 * Cada coleccion de raster puede pesar aproximadamente 1 GB.
 * Es un proyecto de muestra, no prometo actualizar y/o agregar nuevas funciones.
-* Use y abuse.

@@ -9,8 +9,6 @@ from osgeo import ogr, osr, gdal
 from osgeo import gdal_array as ga
 from osgeo_utils.pct2rgb import pct2rgb
 
-gdal.SetCacheMax(4000000000)
-
 @jit(nopython=True)
 def ndvi(nir, red):
     return np.divide((nir - red), (nir + red))
@@ -88,7 +86,7 @@ def cut_tile_final(poligono):
         gtif = gdal.Open(F"{os.getcwd()}/s2files/NDVI.tif")
         srcband = gtif.GetRasterBand(1)
         srcband.SetNoDataValue(0)
-        # Se aplica quantiles para mejor distribucion de pixeles
+        # Se aplica funcion cuantil para mejorar a una distribucion porcentual de colores
         ndvi_data = srcband.ReadAsArray()
         ndvi_data_flat = ndvi_data.flatten()
         ndvi_data_filtered = ndvi_data_flat[ndvi_data_flat != srcband.GetNoDataValue()]
@@ -106,6 +104,7 @@ def cut_tile_final(poligono):
             F"{os.getcwd()}/s2files/NDVI.tif",
             options=gdal.TranslateOptions(
                 format="VRT",
+                noData="0 0 0"
             )
         )
         gdal.DEMProcessing(
@@ -162,9 +161,15 @@ def cut_tile_final(poligono):
 
 def merge_images(resp):
     try:
+        if type(resp["poligono"][0]["coordinates"][0][0]) == list:
+            shap = transform_shap(resp["poligono"])
+        else:
+            shap = resp["poligono"]
         li_red = []
         li_nir = []
+        pos = 0
         for l in resp["adjuntado"]:
+            pos += 1
             red_file = glob.glob(
                 F"{os.getcwd()}/s2files/{l['name']}/GRANULE/**/*B04_10m.jp2",
                 recursive=True,
@@ -173,8 +178,55 @@ def merge_images(resp):
                 F"{os.getcwd()}/s2files/{l['name']}/GRANULE/**/*B08_10m.jp2",
                 recursive=True,
             )
-            li_red.append(red_file[0])
-            li_nir.append(nir_file[0])
+            if red_file and nir_file:
+                with rasterio.open(
+                    red_file[0]
+                ) as rc:
+                    red_image, red_transform = rasterio.mask.mask(
+                        dataset=rc,
+                        shapes=shap,
+                        crop=True,
+                        all_touched=False,
+                        pad=False,
+                        pad_width=1,
+                        nodata=0
+                    )
+                    red_meta = rc.meta
+                    red_meta.update(
+                        {
+                            "driver": "Gtiff",
+                            "height": red_image.shape[1],
+                            "width": red_image.shape[2],
+                            "transform": red_transform,
+                        }
+                    )
+                with rasterio.open(F"{os.getcwd()}/s2files/red{pos}", "w", **red_meta) as rcf:
+                    rcf.write(red_image)
+                with rasterio.open(
+                    nir_file[0]
+                ) as nc:
+                    nir_image, nir_transform = rasterio.mask.mask(
+                        dataset=nc,
+                        shapes=shap,
+                        crop=True,
+                        all_touched=False,
+                        pad=False,
+                        pad_width=1,
+                        nodata=0
+                    )
+                    nir_meta = nc.meta
+                    nir_meta.update(
+                        {
+                            "driver": "GTiff",
+                            "height": nir_image.shape[1],
+                            "width": nir_image.shape[2],
+                            "transform": nir_transform,
+                        }
+                    )
+                with rasterio.open(F"{os.getcwd()}/s2files/nir{pos}", "w", **nir_meta) as ncf:
+                    ncf.write(nir_image)
+                li_red.append(F"{os.getcwd()}/s2files/red{pos}")
+                li_nir.append(F"{os.getcwd()}/s2files/nir{pos}")
         build = gdal.BuildVRTOptions(
             srcNodata=0,
             hideNodata=None
@@ -191,22 +243,19 @@ def merge_images(resp):
         )
         translate = gdal.TranslateOptions()
         gdal.Translate(
-            F"{os.getcwd()}/s2files/red1",
+            F"{os.getcwd()}/s2files/red",
             F"{os.getcwd()}/s2files/red.vrt",
             options=translate
         )
         gdal.Translate(
-            F"{os.getcwd()}/s2files/nir1",
+            F"{os.getcwd()}/s2files/nir",
             F"{os.getcwd()}/s2files/nir.vrt",
             options=translate
         )
         print("archivos obtenidos")
-        if type(resp["poligono"][0]["coordinates"][0][0]) == list:
-            shap = transform_shap(resp["poligono"])
-        else:
-            shap = resp["poligono"]
+        
         with rasterio.open(
-            F"{os.getcwd()}/s2files/red1"
+            F"{os.getcwd()}/s2files/red"
         ) as rc:
             red_image, red_transform = rasterio.mask.mask(
                 dataset=rc,
@@ -229,7 +278,7 @@ def merge_images(resp):
         with rasterio.open(F"{os.getcwd()}/s2files/red", "w", **red_meta) as rcf:
             rcf.write(red_image)
         with rasterio.open(
-            F"{os.getcwd()}/s2files/nir1"
+            F"{os.getcwd()}/s2files/nir"
         ) as nc:
             nir_image, nir_transform = rasterio.mask.mask(
                 dataset=nc,
@@ -332,6 +381,6 @@ poligono = [
     ]
   ]
 ]
-end = date.today()
-start = end - timedelta(days=6)
+end = date(2024, 8, 18)
+start = end - timedelta(days=3)
 downloadsentinel(poligono, start, end)
