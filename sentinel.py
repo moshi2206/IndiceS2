@@ -13,6 +13,13 @@ from osgeo_utils.pct2rgb import pct2rgb
 def ndvi(nir, red):
     return np.divide((nir - red), (nir + red))
 
+def operate_clouds(clouds, raster):
+    for i in range(0, len(clouds)):
+        for j in range(0, len(clouds[i])):
+            if clouds[i][j] == 10:
+                raster[i][j] = np.NaN
+    return raster
+
 def list_to_tuple(data):
     """
     Convertir lista a tuple
@@ -138,21 +145,13 @@ def cut_tile_final(poligono):
         with rasterio.open(F"{os.getcwd()}/s2files/final5NDVI.tif", "w", **out_meta) as nc:
             nc.write(out_image2)
         gdal.Translate(
-            F"{os.getcwd()}/s2files/final6NDVI.vrt",
+            F"{os.getcwd()}/s2files/final5NDVI.png",
             F"{os.getcwd()}/s2files/final5NDVI.tif",
             options=gdal.TranslateOptions(
-                format="VRT",
-                outputType=gdal.GDT_Byte,
-                maskBand=1
-            )
-        )
-        gdal.Translate(
-            F"{os.getcwd()}/s2files/final6NDVI.png",
-            F"{os.getcwd()}/s2files/final6NDVI.vrt",
-            options=gdal.TranslateOptions(
                 format="PNG",
-                noData="0 0 0",
-                maskBand=1
+                outputType=gdal.GDT_Byte,
+                maskBand=1,
+                noData="0 0 0"
             )
         )
     except Exception as e:
@@ -167,6 +166,7 @@ def merge_images(resp):
             shap = resp["poligono"]
         li_red = []
         li_nir = []
+        li_scl = []
         pos = 0
         for l in resp["adjuntado"]:
             pos += 1
@@ -178,7 +178,11 @@ def merge_images(resp):
                 F"{os.getcwd()}/s2files/{l['name']}/GRANULE/**/*B08_10m.jp2",
                 recursive=True,
             )
-            if red_file and nir_file:
+            cld_file = glob.glob(
+                F"{os.getcwd()}/s2files/{l['name']}/GRANULE/**/*SCL_20m.jp2",
+                recursive=True,
+            )
+            if red_file and nir_file and cld_file:
                 with rasterio.open(
                     red_file[0]
                 ) as rc:
@@ -225,8 +229,33 @@ def merge_images(resp):
                     )
                 with rasterio.open(F"{os.getcwd()}/s2files/nir{pos}", "w", **nir_meta) as ncf:
                     ncf.write(nir_image)
+                with rasterio.open(
+                    cld_file[0]
+                ) as cl:
+                    cld_image, cld_transform = rasterio.mask.mask(
+                        dataset=cl,
+                        shapes=shap,
+                        crop=True,
+                        all_touched=False,
+                        pad=False,
+                        pad_width=1,
+                        nodata=0
+                    )
+                    cld_meta = cl.meta
+                    cld_meta.update(
+                        {
+                            "driver": "GTiff",
+                            "height": cld_image.shape[1],
+                            "width": cld_image.shape[2],
+                            "transform": cld_transform,
+                        }
+                    )
+                with rasterio.open(F"{os.getcwd()}/s2files/cld{pos}", "w", **cld_meta) as cld:
+                    cld.write(cld_image)
+                gdal.Translate(F"{os.getcwd()}/s2files/scl{pos}", F"{os.getcwd()}/s2files/cld{pos}", xRes=10, yRes=10, resampleAlg="near", format="GTiff")
                 li_red.append(F"{os.getcwd()}/s2files/red{pos}")
                 li_nir.append(F"{os.getcwd()}/s2files/nir{pos}")
+                li_scl.append(F"{os.getcwd()}/s2files/scl{pos}")
         build = gdal.BuildVRTOptions(
             srcNodata=0,
             hideNodata=None
@@ -241,6 +270,11 @@ def merge_images(resp):
             li_nir,
             options=build
         )
+        gdal.BuildVRT(
+            F"{os.getcwd()}/s2files/scl.vrt",
+            li_scl,
+            options=build
+        )
         translate = gdal.TranslateOptions()
         gdal.Translate(
             F"{os.getcwd()}/s2files/red",
@@ -250,6 +284,11 @@ def merge_images(resp):
         gdal.Translate(
             F"{os.getcwd()}/s2files/nir",
             F"{os.getcwd()}/s2files/nir.vrt",
+            options=translate
+        )
+        gdal.Translate(
+            F"{os.getcwd()}/s2files/scl",
+            F"{os.getcwd()}/s2files/scl.vrt",
             options=translate
         )
         print("archivos obtenidos")
@@ -300,12 +339,39 @@ def merge_images(resp):
             )
         with rasterio.open(F"{os.getcwd()}/s2files/nir", "w", **nir_meta) as ncf:
             ncf.write(nir_image)
+        with rasterio.open(
+            F"{os.getcwd()}/s2files/scl"
+        ) as sc:
+            scl_image, scl_transform = rasterio.mask.mask(
+                dataset=sc,
+                shapes=shap,
+                crop=True,
+                all_touched=False,
+                pad=False,
+                pad_width=1,
+                nodata=0
+            )
+            scl_meta = sc.meta
+            scl_meta.update(
+                {
+                    "driver": "GTiff",
+                    "height": nir_image.shape[1],
+                    "width": nir_image.shape[2],
+                    "transform": nir_transform,
+                }
+            )
+        with rasterio.open(F"{os.getcwd()}/s2files/scl", "w", **scl_meta) as ncf:
+            ncf.write(nir_image)
         red_link = gdal.Open(F"{os.getcwd()}/s2files/red")
         nir_link = gdal.Open(F"{os.getcwd()}/s2files/nir")
+        scl_link = gdal.Open(F"{os.getcwd()}/s2files/scl")
+        np.seterr(divide="ignore", invalid="ignore")
         red = red_link.ReadAsArray().astype(np.float32)
         nir = nir_link.ReadAsArray().astype(np.float32)
-        np.seterr(divide="ignore", invalid="ignore")
+        scl = scl_link.ReadAsArray().astype(np.int8)
+        
         ndvi_ = ndvi(nir, red)
+        ndvi_ = operate_clouds(scl, ndvi_)
         print("NDVI Generado")
         ndvi1 = ga.numpy.nan_to_num(ndvi_)
         ga.SaveArray(ndvi1, F"{os.getcwd()}/s2files/NDVI.tif", format="GTiff", prototype=F"{os.getcwd()}/s2files/red")
