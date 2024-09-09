@@ -100,7 +100,7 @@ def cut_tile_final(poligono):
         colors = ['red', 'orange', 'yellow', 'green', '76 132 60']
         quantiles = np.quantile(ndvi_data_filtered, np.linspace(0, 1, len(colors) + 1)[1:])
         texto = ""
-        for (color, quantile) in enumerate(zip(colors, quantiles)):
+        for (color, quantile) in zip(colors, quantiles):
             texto += F"{quantile} {color}\n"
         print("Colores definidos")
         filetxt = open(F"{os.getcwd()}/s2files/NDVI.txt", "w")
@@ -355,13 +355,13 @@ def merge_images(resp):
             scl_meta.update(
                 {
                     "driver": "GTiff",
-                    "height": nir_image.shape[1],
-                    "width": nir_image.shape[2],
-                    "transform": nir_transform,
+                    "height": scl_image.shape[1],
+                    "width": scl_image.shape[2],
+                    "transform": scl_transform,
                 }
             )
-        with rasterio.open(F"{os.getcwd()}/s2files/scl", "w", **scl_meta) as ncf:
-            ncf.write(nir_image)
+        with rasterio.open(F"{os.getcwd()}/s2files/scl", "w", **scl_meta) as scf:
+            scf.write(scl_image)
         red_link = gdal.Open(F"{os.getcwd()}/s2files/red")
         nir_link = gdal.Open(F"{os.getcwd()}/s2files/nir")
         scl_link = gdal.Open(F"{os.getcwd()}/s2files/scl")
@@ -371,7 +371,7 @@ def merge_images(resp):
         scl = scl_link.ReadAsArray().astype(np.int8)
         
         ndvi_ = ndvi(nir, red)
-        ndvi_ = operate_clouds(scl, ndvi_)
+        #ndvi_ = operate_clouds(scl, ndvi_)
         print("NDVI Generado")
         ndvi1 = ga.numpy.nan_to_num(ndvi_)
         ga.SaveArray(ndvi1, F"{os.getcwd()}/s2files/NDVI.tif", format="GTiff", prototype=F"{os.getcwd()}/s2files/red")
