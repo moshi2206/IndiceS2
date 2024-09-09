@@ -100,14 +100,14 @@ def cut_tile_final(poligono):
         colors = ['red', 'orange', 'yellow', 'green', '76 132 60']
         quantiles = np.quantile(ndvi_data_filtered, np.linspace(0, 1, len(colors) + 1)[1:])
         texto = ""
-        for i, (color, quantile) in enumerate(zip(colors, quantiles)):
+        for (color, quantile) in enumerate(zip(colors, quantiles)):
             texto += F"{quantile} {color}\n"
         print("Colores definidos")
         filetxt = open(F"{os.getcwd()}/s2files/NDVI.txt", "w")
         filetxt.write(texto)
         filetxt.close()
         gdal.Translate(
-            F"{os.getcwd()}/s2files/final3NDVI.vrt",
+            F"{os.getcwd()}/s2files/final1NDVI.vrt",
             F"{os.getcwd()}/s2files/NDVI.tif",
             options=gdal.TranslateOptions(
                 format="VRT",
@@ -115,15 +115,15 @@ def cut_tile_final(poligono):
             )
         )
         gdal.DEMProcessing(
-            F"{os.getcwd()}/s2files/final4NDVI.tif",
-            F"{os.getcwd()}/s2files/final3NDVI.vrt",
+            F"{os.getcwd()}/s2files/final2NDVI.tif",
+            F"{os.getcwd()}/s2files/final1NDVI.vrt",
             "color-relief",
             options=gdal.DEMProcessingOptions(
                 colorFilename=F"{os.getcwd()}/s2files/NDVI.txt",
                 colorSelection="nearest_color_entry"
             )
         )
-        with rasterio.open(F"{os.getcwd()}/s2files/final4NDVI.tif") as nf:
+        with rasterio.open(F"{os.getcwd()}/s2files/final2NDVI.tif") as nf:
             out_image2, out_transform2 = rasterio.mask.mask(
                 dataset=nf,
                 shapes=poligono,
@@ -142,11 +142,11 @@ def cut_tile_final(poligono):
                     "transform": out_transform2,
                 }
             )
-        with rasterio.open(F"{os.getcwd()}/s2files/final5NDVI.tif", "w", **out_meta) as nc:
+        with rasterio.open(F"{os.getcwd()}/s2files/final3NDVI.tif", "w", **out_meta) as nc:
             nc.write(out_image2)
         gdal.Translate(
-            F"{os.getcwd()}/s2files/final5NDVI.png",
-            F"{os.getcwd()}/s2files/final5NDVI.tif",
+            F"{os.getcwd()}/s2files/final3NDVI.png",
+            F"{os.getcwd()}/s2files/final3NDVI.tif",
             options=gdal.TranslateOptions(
                 format="PNG",
                 outputType=gdal.GDT_Byte,
