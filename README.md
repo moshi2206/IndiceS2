@@ -20,7 +20,7 @@ Proyecto de muestra para descargar y procesar imagenes satelitales de Sentinel-2
 * Ejecutar [sentinel.py](sentinel.py).
 
 # Resultado Logrado
-![Resultado](/ndvi/final6NDVI.png)
+![Resultado](/ndvi/NDVI.png)
 
 # TODO
 - [x] Crear imágenes NDVI.
