@@ -1,17 +1,21 @@
-from datetime import date, timedelta, datetime
-from numba import jit
-import rasterio.mask
 from copernicus import filter_by_date_box, download_all
-import numpy as np
-import cv2, glob, os, rasterio
-from shapely.geometry import Polygon
+from datetime import date, timedelta, datetime
 from osgeo import ogr, osr, gdal
 from osgeo import gdal_array as ga
-from osgeo_utils.pct2rgb import pct2rgb
+from numba import jit
+from shapely.geometry import Polygon
+import rasterio.mask
+import numpy as np
+import cv2
+import glob
+import os
+import rasterio
+
 
 @jit(nopython=True)
 def ndvi(nir, red):
     return np.divide((nir - red), (nir + red))
+
 
 def operate_clouds(clouds, raster):
     for i in range(0, len(clouds)):
@@ -19,6 +23,7 @@ def operate_clouds(clouds, raster):
             if clouds[i][j] == 10:
                 raster[i][j] = np.NaN
     return raster
+
 
 def list_to_tuple(data):
     """
@@ -29,9 +34,12 @@ def list_to_tuple(data):
     else:
         return data
 
+
 def reduce_vertice(poly):
     """
-    Reduce vertice es una funcion para reducir vertices de un poligono irregular al minimo posible
+    Reduce vertice
+    Es una funcion para reducir vertices de un
+    poligono irregular al minimo posible
     """
     poly2 = np.array(poly, dtype=np.float32)
     rect = cv2.minAreaRect(poly2)
@@ -40,6 +48,7 @@ def reduce_vertice(poly):
     if box[0] != box[-1]:
         box.append(box[0])
     return [box]
+
 
 def transform_shap(shap):
     """
@@ -59,7 +68,10 @@ def transform_shap(shap):
 
             outSpatialRef = osr.SpatialReference()
             outSpatialRef.ImportFromEPSG(outputEPSG)
-            coordTransform = osr.CoordinateTransformation(inSpatialRef, outSpatialRef)
+            coordTransform = osr.CoordinateTransformation(
+                inSpatialRef,
+                outSpatialRef
+            )
 
             point.Transform(coordTransform)
             coor = (point.GetX(), point.GetY())
@@ -68,6 +80,7 @@ def transform_shap(shap):
         pos2 = 0
         pos1 += 1
     return shap
+
 
 def cut_tile_final(poligono):
     try:
@@ -93,12 +106,19 @@ def cut_tile_final(poligono):
         gtif = gdal.Open(F"{os.getcwd()}/s2files/NDVI.tif")
         srcband = gtif.GetRasterBand(1)
         srcband.SetNoDataValue(0)
-        # Se aplica funcion cuantil para mejorar a una distribucion porcentual de colores
+        """
+        Se aplica funcion cuantil
+        para mejorar a una distribucion porcentual de colores
+        """
         ndvi_data = srcband.ReadAsArray()
         ndvi_data_flat = ndvi_data.flatten()
-        ndvi_data_filtered = ndvi_data_flat[ndvi_data_flat != srcband.GetNoDataValue()]
+        ndvi_data_filtered = ndvi_data_flat[
+            ndvi_data_flat != srcband.GetNoDataValue()]
         colors = ['red', 'orange', 'yellow', 'green', '76 132 60']
-        quantiles = np.quantile(ndvi_data_filtered, np.linspace(0, 1, len(colors) + 1)[1:])
+        quantiles = np.quantile(
+            ndvi_data_filtered,
+            np.linspace(0, 1, len(colors) + 1)[1:]
+        )
         texto = ""
         for (color, quantile) in zip(colors, quantiles):
             texto += F"{quantile} {color}\n"
@@ -142,7 +162,9 @@ def cut_tile_final(poligono):
                     "transform": out_transform2,
                 }
             )
-        with rasterio.open(F"{os.getcwd()}/s2files/final3NDVI.tif", "w", **out_meta) as nc:
+        with rasterio.open(
+            F"{os.getcwd()}/s2files/final3NDVI.tif", "w", **out_meta
+        ) as nc:
             nc.write(out_image2)
         gdal.Translate(
             F"{os.getcwd()}/s2files/final3NDVI.png",
@@ -160,7 +182,7 @@ def cut_tile_final(poligono):
 
 def merge_images(resp):
     try:
-        if type(resp["poligono"][0]["coordinates"][0][0]) == list:
+        if resp["poligono"][0]["coordinates"][0][0] is list:
             shap = transform_shap(resp["poligono"])
         else:
             shap = resp["poligono"]
@@ -168,18 +190,18 @@ def merge_images(resp):
         li_nir = []
         li_scl = []
         pos = 0
-        for l in resp["adjuntado"]:
+        for element in resp["adjuntado"]:
             pos += 1
             red_file = glob.glob(
-                F"{os.getcwd()}/s2files/{l['name']}/GRANULE/**/*B04_10m.jp2",
+                F"{os.getcwd()}/s2files/{element['name']}/GRANULE/**/*B04_10m.jp2",
                 recursive=True,
             )
             nir_file = glob.glob(
-                F"{os.getcwd()}/s2files/{l['name']}/GRANULE/**/*B08_10m.jp2",
+                F"{os.getcwd()}/s2files/{element['name']}/GRANULE/**/*B08_10m.jp2",
                 recursive=True,
             )
             cld_file = glob.glob(
-                F"{os.getcwd()}/s2files/{l['name']}/GRANULE/**/*SCL_20m.jp2",
+                F"{os.getcwd()}/s2files/{element['name']}/GRANULE/**/*SCL_20m.jp2",
                 recursive=True,
             )
             if red_file and nir_file and cld_file:
@@ -204,7 +226,9 @@ def merge_images(resp):
                             "transform": red_transform,
                         }
                     )
-                with rasterio.open(F"{os.getcwd()}/s2files/red{pos}", "w", **red_meta) as rcf:
+                with rasterio.open(
+                    F"{os.getcwd()}/s2files/red{pos}", "w", **red_meta
+                ) as rcf:
                     rcf.write(red_image)
                 with rasterio.open(
                     nir_file[0]
@@ -227,7 +251,9 @@ def merge_images(resp):
                             "transform": nir_transform,
                         }
                     )
-                with rasterio.open(F"{os.getcwd()}/s2files/nir{pos}", "w", **nir_meta) as ncf:
+                with rasterio.open(
+                    F"{os.getcwd()}/s2files/nir{pos}", "w", **nir_meta
+                ) as ncf:
                     ncf.write(nir_image)
                 with rasterio.open(
                     cld_file[0]
@@ -250,9 +276,15 @@ def merge_images(resp):
                             "transform": cld_transform,
                         }
                     )
-                with rasterio.open(F"{os.getcwd()}/s2files/cld{pos}", "w", **cld_meta) as cld:
+                with rasterio.open(
+                    F"{os.getcwd()}/s2files/cld{pos}", "w", **cld_meta
+                ) as cld:
                     cld.write(cld_image)
-                gdal.Translate(F"{os.getcwd()}/s2files/scl{pos}", F"{os.getcwd()}/s2files/cld{pos}", xRes=10, yRes=10, resampleAlg="near", format="GTiff")
+                gdal.Translate(
+                    F"{os.getcwd()}/s2files/scl{pos}",
+                    F"{os.getcwd()}/s2files/cld{pos}",
+                    xRes=10, yRes=10, resampleAlg="near", format="GTiff"
+                )
                 li_red.append(F"{os.getcwd()}/s2files/red{pos}")
                 li_nir.append(F"{os.getcwd()}/s2files/nir{pos}")
                 li_scl.append(F"{os.getcwd()}/s2files/scl{pos}")
@@ -292,7 +324,7 @@ def merge_images(resp):
             options=translate
         )
         print("archivos obtenidos")
-        
+
         with rasterio.open(
             F"{os.getcwd()}/s2files/red"
         ) as rc:
@@ -314,7 +346,9 @@ def merge_images(resp):
                     "transform": red_transform,
                 }
             )
-        with rasterio.open(F"{os.getcwd()}/s2files/red", "w", **red_meta) as rcf:
+        with rasterio.open(
+            F"{os.getcwd()}/s2files/red", "w", **red_meta
+        ) as rcf:
             rcf.write(red_image)
         with rasterio.open(
             F"{os.getcwd()}/s2files/nir"
@@ -337,7 +371,9 @@ def merge_images(resp):
                     "transform": nir_transform,
                 }
             )
-        with rasterio.open(F"{os.getcwd()}/s2files/nir", "w", **nir_meta) as ncf:
+        with rasterio.open(
+            F"{os.getcwd()}/s2files/nir", "w", **nir_meta
+        ) as ncf:
             ncf.write(nir_image)
         with rasterio.open(
             F"{os.getcwd()}/s2files/scl"
@@ -360,25 +396,33 @@ def merge_images(resp):
                     "transform": scl_transform,
                 }
             )
-        with rasterio.open(F"{os.getcwd()}/s2files/scl", "w", **scl_meta) as scf:
+        with rasterio.open(
+            F"{os.getcwd()}/s2files/scl", "w", **scl_meta
+        ) as scf:
             scf.write(scl_image)
         red_link = gdal.Open(F"{os.getcwd()}/s2files/red")
         nir_link = gdal.Open(F"{os.getcwd()}/s2files/nir")
-        scl_link = gdal.Open(F"{os.getcwd()}/s2files/scl")
+        # scl_link = gdal.Open(F"{os.getcwd()}/s2files/scl")
         np.seterr(divide="ignore", invalid="ignore")
         red = red_link.ReadAsArray().astype(np.float32)
         nir = nir_link.ReadAsArray().astype(np.float32)
-        scl = scl_link.ReadAsArray().astype(np.int8)
-        
+        # scl = scl_link.ReadAsArray().astype(np.int8)
+
         ndvi_ = ndvi(nir, red)
-        #ndvi_ = operate_clouds(scl, ndvi_)
+        # ndvi_ = operate_clouds(scl, ndvi_)
         print("NDVI Generado")
         ndvi1 = ga.numpy.nan_to_num(ndvi_)
-        ga.SaveArray(ndvi1, F"{os.getcwd()}/s2files/NDVI.tif", format="GTiff", prototype=F"{os.getcwd()}/s2files/red")
+        ga.SaveArray(
+            ndvi1,
+            F"{os.getcwd()}/s2files/NDVI.tif",
+            format="GTiff",
+            prototype=F"{os.getcwd()}/s2files/red"
+        )
         print("Iniciando Corte")
         cut_tile_final(shap)
     except Exception as e:
         print(e)
+
 
 def downloadsentinel(poly, start, end):
     """
@@ -402,7 +446,8 @@ def downloadsentinel(poly, start, end):
         "adjuntado": []
     }
     for da in data['value']:
-        odate = datetime.strptime(da['OriginDate'].split("T")[0], "%Y-%m-%d").date()
+        odate = datetime.strptime(
+            da['OriginDate'].split("T")[0], "%Y-%m-%d").date()
         comp["fecha"] = odate
         download_all(da)
         comp["adjuntado"].append(
@@ -410,10 +455,10 @@ def downloadsentinel(poly, start, end):
                 "name": da["Name"],
                 "fecha": odate
             }
-            
         )
     if comp["fecha"] != "":
         merge_images(comp)
+
 
 poligono = [
   [

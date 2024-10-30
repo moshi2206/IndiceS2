@@ -1,8 +1,12 @@
-import requests, json, os, zipfile
+from decouple import config
 from requests.adapters import HTTPAdapter
 from shapely.geometry import Polygon
 from urllib3.util import Retry
-from decouple import config
+import requests
+import json
+import os
+import zipfile
+
 
 retries = Retry(
     total=3,
@@ -10,6 +14,7 @@ retries = Retry(
     status_forcelist=[502, 503, 504],
     allowed_methods={'GET'},
 )
+
 
 def get_access_token(username: str, password: str) -> str:
     """
@@ -29,11 +34,15 @@ def get_access_token(username: str, password: str) -> str:
         r.raise_for_status()
     except Exception as e:
         raise Exception(
-            f"Access token creation failed. Reponse from the server was: {r.json()}"
+            f"""Access token creation failed.
+Reponse from the server was: {r.json()}
+Error: {e}"""
         )
     return r.json()["access_token"]
 
-def filter_by_date_box(start: str, end: str, polygon: Polygon, cloud: str) -> json:
+
+def filter_by_date_box(
+        start: str, end: str, polygon: Polygon, cloud: str) -> json:
     """
     Filtrar por fechas, poligono, nubes
     """
@@ -51,12 +60,14 @@ and ContentDate/Start lt {end}"""
     json = s.get(string).json()
     return json
 
+
 def download_all(da: dict) -> str:
     if os.path.exists(F"{os.getcwd()}/s2files/" + da["Name"]):
         pass
     else:
         # Se obtiene un token por cada descarga, el token caduca cada x minutos
-        token = get_access_token(config("USER_DATASPACE", None), config("PASSWORD_DATASPACE", None))
+        token = get_access_token(
+            config("USER_DATASPACE", None), config("PASSWORD_DATASPACE", None))
         # Hacer request para descargar archivo
         url = f"https://zipper.dataspace.copernicus.eu/odata/v1/Products({da['Id']})/$value"
         headers = {"Authorization": f"Bearer {token}"}
@@ -68,7 +79,9 @@ def download_all(da: dict) -> str:
         total_size = int(response.headers['Content-Length'])
         downloaded_size = 0
         # Escribir archivo
-        with open(F"{os.getcwd()}/s2files/" + da['Name'] + ".zip", "wb") as file:
+        with open(
+            F"{os.getcwd()}/s2files/" + da['Name'] + ".zip", "wb"
+        ) as file:
             for chunk in response.iter_content(chunk_size=8192):
                 if chunk:
                     downloaded_size += len(chunk)
@@ -77,7 +90,9 @@ def download_all(da: dict) -> str:
                     file.write(chunk)
         try:
             # Descomprimir archivo
-            with zipfile.ZipFile(F"{os.getcwd()}/s2files/" + da["Name"] + ".zip", "r") as zip_file:
+            with zipfile.ZipFile(
+                F"{os.getcwd()}/s2files/" + da["Name"] + ".zip", "r"
+            ) as zip_file:
                 zip_file.extractall(F"{os.getcwd()}/s2files/")
             os.remove(F"{os.getcwd()}/s2files/" + da["Name"] + ".zip")
         except:
