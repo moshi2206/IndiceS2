@@ -10,6 +10,7 @@ Proyecto de muestra para descargar y procesar imagenes satelitales de Sentinel-2
 * Registrarse en https://dataspace.copernicus.eu/ para acceder a las imagenes satelitales.
 
 # Instalacion
+* Instalar GDAL https://gdal.org/en/latest/download.html#binaries
 * git clone https://github.com/moshi2206/IndiceS2.git.
 * Crear un Virtual Environment: python -m venv env.
 * Activar env: source env/bin/activate.
@@ -29,4 +30,6 @@ Proyecto de muestra para descargar y procesar imagenes satelitales de Sentinel-2
 
 # PD
 * Cada coleccion de raster puede pesar aproximadamente 1 GB.
-* Es un proyecto de muestra, no prometo actualizar y/o agregar nuevas funciones.
+* Es un proyecto de muestra.
+* En algunos casos requiere que se instale gcc
+* En mi maquina si funciona :smirk:

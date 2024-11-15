@@ -182,10 +182,11 @@ def cut_tile_final(poligono):
 
 def merge_images(resp):
     try:
-        if resp["poligono"][0]["coordinates"][0][0] is list:
+        if type(resp["poligono"][0]["coordinates"][0][0]) == list:
             shap = transform_shap(resp["poligono"])
         else:
             shap = resp["poligono"]
+        print(shap)
         li_red = []
         li_nir = []
         li_scl = []
@@ -208,6 +209,7 @@ def merge_images(resp):
                 with rasterio.open(
                     red_file[0]
                 ) as rc:
+                    print(rc)
                     red_image, red_transform = rasterio.mask.mask(
                         dataset=rc,
                         shapes=shap,
@@ -217,6 +219,7 @@ def merge_images(resp):
                         pad_width=1,
                         nodata=0
                     )
+                    print(red_image)
                     red_meta = rc.meta
                     red_meta.update(
                         {
