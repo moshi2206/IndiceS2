@@ -50,12 +50,12 @@ def reduce_vertice(poly):
     return [box]
 
 
-def transform_shap(shap):
+def transform_shap(shap, output):
     """
     Convertir el AOI (Area of Interest) EPSG (Geodistico)
     """
     inputEPSG = 4326
-    outputEPSG = 32721
+    outputEPSG = output
     pos1 = 0
     pos2 = 0
     for coord in shap[0]["coordinates"]:
@@ -182,10 +182,6 @@ def cut_tile_final(poligono):
 
 def merge_images(resp):
     try:
-        if type(resp["poligono"][0]["coordinates"][0][0]) == list:
-            shap = transform_shap(resp["poligono"])
-        else:
-            shap = resp["poligono"]
         print(shap)
         li_red = []
         li_nir = []
@@ -209,7 +205,10 @@ def merge_images(resp):
                 with rasterio.open(
                     red_file[0]
                 ) as rc:
-                    print(rc)
+                    if type(resp["poligono"][0]["coordinates"][0][0]) == list:
+                        shap = transform_shap(resp["poligono"], int(str(rc.crs).split(":")[1]))
+                    else:
+                        shap = resp["poligono"]
                     red_image, red_transform = rasterio.mask.mask(
                         dataset=rc,
                         shapes=shap,
@@ -219,7 +218,6 @@ def merge_images(resp):
                         pad_width=1,
                         nodata=0
                     )
-                    print(red_image)
                     red_meta = rc.meta
                     red_meta.update(
                         {
