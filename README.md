@@ -26,6 +26,7 @@ Proyecto de muestra para descargar y procesar imagenes satelitales de Sentinel-2
 # TODO
 - [x] Crear imágenes NDVI.
 - [x] Mejorar Colores.
+- [ ] Guardar Rasters cortados en memoria.
 - [ ] Clasificación y Teledetección de nubes.
 
 # PD
