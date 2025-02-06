@@ -182,7 +182,6 @@ def cut_tile_final(poligono):
 
 def merge_images(resp):
     try:
-        print(shap)
         li_red = []
         li_nir = []
         li_scl = []
