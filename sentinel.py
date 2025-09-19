@@ -131,7 +131,7 @@ def cut_tile_final(poligono):
             F"{os.getcwd()}/s2files/NDVI.tif",
             options=gdal.TranslateOptions(
                 format="VRT",
-                noData="0 0 0"
+                noData="0"
             )
         )
         gdal.DEMProcessing(
@@ -173,7 +173,7 @@ def cut_tile_final(poligono):
                 format="PNG",
                 outputType=gdal.GDT_Byte,
                 maskBand=1,
-                noData="0 0 0"
+                noData="0"
             )
         )
     except Exception as e:
