@@ -54,28 +54,34 @@ def transform_shap(shap, output):
     """
     Convertir el AOI (Area of Interest) EPSG (Geodistico)
     """
+    osr.UseExceptions()
     inputEPSG = 4326
     outputEPSG = output
     pos1 = 0
     pos2 = 0
     for coord in shap[0]["coordinates"]:
         for coor in coord:
-            point = ogr.Geometry(ogr.wkbPoint)
-            point.AddPoint(coor[1], coor[0])
+            try:
+                point = ogr.Geometry(ogr.wkbPoint)
+                point.AddPoint(coor[1], coor[0])
 
-            inSpatialRef = osr.SpatialReference()
-            inSpatialRef.ImportFromEPSG(inputEPSG)
+                inSpatialRef = osr.SpatialReference()
+                inSpatialRef.ImportFromEPSG(inputEPSG)
 
-            outSpatialRef = osr.SpatialReference()
-            outSpatialRef.ImportFromEPSG(outputEPSG)
-            coordTransform = osr.CoordinateTransformation(
-                inSpatialRef,
-                outSpatialRef
-            )
+                outSpatialRef = osr.SpatialReference()
+                outSpatialRef.ImportFromEPSG(outputEPSG)
+                coordTransform = osr.CoordinateTransformation(
+                    inSpatialRef,
+                    outSpatialRef
+                )
 
-            point.Transform(coordTransform)
-            coor = (point.GetX(), point.GetY())
-            shap[0]["coordinates"][pos1][pos2] = coor
+                point.Transform(coordTransform)
+                coor = (point.GetX(), point.GetY())
+                shap[0]["coordinates"][pos1][pos2] = coor
+            except RuntimeError as e:
+                raise RuntimeError(
+                    F"Error transformando coordenada: {e}"
+                )
             pos2 += 1
         pos2 = 0
         pos1 += 1
